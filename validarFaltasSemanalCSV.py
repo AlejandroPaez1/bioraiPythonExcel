@@ -4,6 +4,19 @@ from tkinter import Tk, filedialog
 from datetime import datetime, timedelta
 import openpyxl
 from collections import defaultdict
+def determinar_formato(checada_str):
+    if '/' in checada_str:
+        if len(checada_str) == 16:
+            return "%d/%m/%Y %H:%M"
+        elif len(checada_str) == 19:
+            return "%d/%m/%Y %H:%M:%S"
+    elif '-' in checada_str:
+        if len(checada_str) == 16:
+            return "%d-%m-%Y %H:%M"
+        elif len(checada_str) == 19:
+            return "%d-%m-%Y %H:%M:%S"
+    else:
+        raise ValueError("Formato de fecha y hora no reconocido")
 
 def buscar_no_checadores(archivo_checadores):
     with open(archivo_checadores, 'r', newline='', encoding='utf-8') as file:
@@ -18,7 +31,10 @@ def buscar_no_checadores(archivo_checadores):
         dispositivo = empleado["Dispositivo"]
         checada_str = empleado["Checada"]
         # Convertir la cadena de fecha y hora en un objeto datetime
-        checada_dt = datetime.strptime(checada_str, "%d-%m-%Y %H:%M:%S")
+        formato = determinar_formato(checada_str)
+        checada_dt = datetime.strptime(checada_str, formato)
+        # checada_dt = datetime.strptime(checada_str, "%d-%m-%Y %H:%M:%S")
+        # checada_dt = datetime.strptime(checada_str, "%d/%m/%Y %H:%M")
         # Almacenar la fecha de la checada en el diccionario
         checadas_por_pin[pin].append((checada_dt, nombre, dispositivo))
 
@@ -86,6 +102,13 @@ for pin, (dias_no_checados, nombres, dispositivos) in dias_no_checados_por_emple
             else:
                 ws.cell(row=row, column=3+idx).value = "A"
         row += 1
+def obtener_nombre_archivo(nombre_base, extension):
+    contador = 1
+    while True:
+        nombre_archivo = f"{nombre_base}_{contador}.{extension}"
+        if not os.path.exists(nombre_archivo):
+            return nombre_archivo
+        contador += 1
 
 # Eliminar la primera columna de fechas
 ws.delete_cols(4)
@@ -95,7 +118,10 @@ ws.delete_cols(ws.max_column)
 # Guardar el archivo de Excel
 nombre_base = "Resultadodecdsv_"
 extension = "xlsx"
-nombre_archivo = f"{os.path.splitext(archivo_checadores)[0]}.xlsx"
+
+# nombre_archivo = f"{os.path.splitext(archivo_checadores)[0]}.xlsx"
+# wb.save(nombre_archivo)
+nombre_archivo = obtener_nombre_archivo(nombre_base, extension)
 wb.save(nombre_archivo)
 
 # # Indicar al usuario que se ha creado el archivo

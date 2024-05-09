@@ -1,6 +1,6 @@
 import csv
 import os
-from tkinter import Tk, filedialog
+from tkinter import Tk, filedialog,messagebox
 from datetime import datetime, timedelta
 import openpyxl
 from collections import defaultdict
@@ -17,6 +17,13 @@ def determinar_formato(checada_str):
             return "%d-%m-%Y %H:%M:%S"
     else:
         raise ValueError("Formato de fecha y hora no reconocido")
+def obtener_nombre_archivo(nombre_base, extension):
+    contador = 1
+    while True:
+        nombre_archivo = f"{nombre_base}_{contador}.{extension}"
+        if not os.path.exists(nombre_archivo):
+            return nombre_archivo
+        contador += 1
 
 def buscar_no_checadores(archivo_checadores):
     with open(archivo_checadores, 'r', newline='', encoding='utf-8') as file:
@@ -68,7 +75,9 @@ root = Tk()
 root.withdraw()  # Ocultar la ventana principal
 
 # Solicitar al usuario que seleccione el archivo CSV
-archivo_checadores = filedialog.askopenfilename(title="Seleccione el archivo CSV")
+# archivo_checadores = filedialog.askopenfilename(title="Seleccione el archivo CSV")
+# Solicitar al usuario que seleccione el archivo CSV
+archivo_checadores = filedialog.askopenfilename(title="Seleccione el archivo CSV", filetypes=[("Archivos CSV", "*.csv")])
 
 # Buscar días en que no se checó por empleado
 dias_no_checados_por_empleado, data_checadores = buscar_no_checadores(archivo_checadores)
@@ -102,13 +111,6 @@ for pin, (dias_no_checados, nombres, dispositivos) in dias_no_checados_por_emple
             else:
                 ws.cell(row=row, column=3+idx).value = "A"
         row += 1
-def obtener_nombre_archivo(nombre_base, extension):
-    contador = 1
-    while True:
-        nombre_archivo = f"{nombre_base}_{contador}.{extension}"
-        if not os.path.exists(nombre_archivo):
-            return nombre_archivo
-        contador += 1
 
 # Eliminar la primera columna de fechas
 ws.delete_cols(4)
@@ -125,4 +127,5 @@ nombre_archivo = obtener_nombre_archivo(nombre_base, extension)
 wb.save(nombre_archivo)
 
 # # Indicar al usuario que se ha creado el archivo
-print(f"Se ha creado el archivo '{nombre_archivo}' con éxito.")
+# print(f"Se ha creado el archivo '{nombre_archivo}' con éxito.")
+messagebox.showinfo("Archivo creado", f"Se ha creado el archivo '{nombre_archivo}' con éxito.")

@@ -113,7 +113,7 @@ for pin, (dias_no_checados, nombres, dispositivos) in dias_no_checados_por_emple
         row += 1
 
 # Eliminar la primera columna de fechas
-ws.delete_cols(4)
+# ws.delete_cols(4)
 # Eliminar la última columna
 ws.delete_cols(ws.max_column)
 

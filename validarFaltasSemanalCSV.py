@@ -17,13 +17,15 @@ def determinar_formato(checada_str):
             return "%d-%m-%Y %H:%M:%S"
     else:
         raise ValueError("Formato de fecha y hora no reconocido")
+    
 def obtener_nombre_archivo(nombre_base, extension):
     contador = 1
     while True:
-        nombre_archivo = f"{nombre_base}_{contador}.{extension}"
+        nombre_archivo = f"{nombre_base}_({contador}).{extension}"
         if not os.path.exists(nombre_archivo):
             return nombre_archivo
         contador += 1
+
 def buscar_no_checadores(archivo_checadores):
     with open(archivo_checadores, 'r', newline='', encoding='utf-8') as file:
         csv_reader = csv.DictReader(file)
@@ -48,20 +50,12 @@ def buscar_no_checadores(archivo_checadores):
 
     # Crear un diccionario para almacenar los días en que no se checó por PIN
     dias_no_checados_por_pin = defaultdict(list)
-    # for pin, checadas in checadas_por_pin.items():
-    #     # Obtener el conjunto único de fechas (días) en que se checó para este PIN
-    #     dias_checados = set(checada.date() for checada, _, _ in checadas)
-    #     # Construir días no checados por empleado
-    #     for fecha in range((ultimo_dia_global - primer_dia_global).days + 1):
-    #         fecha_actual = primer_dia_global + timedelta(days=fecha)
-    #         if fecha_actual not in dias_checados:
-    #             dias_no_checados_por_pin[pin] = (dias_no_checados, [nombre for _, nombre, _ in checadas], [dispositivo for _, _, dispositivo in checadas])
-    #             # dias_no_checados_por_pin[pin].append(fecha_actual)
 
     for pin, checadas in checadas_por_pin.items():
         # Obtener el conjunto único de fechas (días) en que se checó para este PIN
         dias_checados = set(checada.date() for checada, _, _ in checadas)
         # Construir días no checados por empleado
+        
         for fecha in range((ultimo_dia_global - primer_dia_global).days + 1):
             fecha_actual = primer_dia_global + timedelta(days=fecha)
             if fecha_actual not in dias_checados:
@@ -69,8 +63,6 @@ def buscar_no_checadores(archivo_checadores):
                 if pin in dias_no_checados_por_pin:
                     # Si ya tiene una entrada, agregar la fecha no checada, nombre y dispositivo a las listas existentes
                     dias_no_checados_por_pin[pin][0].append(fecha_actual)
-                    dias_no_checados_por_pin[pin][1].append(nombre)
-                    dias_no_checados_por_pin[pin][2].append(dispositivo)
                 else:
                     # Si no tiene una entrada, crear una nueva lista para el PIN
                     dias_no_checados_por_pin[pin] = ([fecha_actual], [nombre], [dispositivo])
@@ -86,7 +78,7 @@ archivo_checadores = filedialog.askopenfilename(title="Seleccione el archivo CSV
 
 # Buscar días en que no se checó por empleado
 dias_no_checados_por_empleado, data_checadores = buscar_no_checadores(archivo_checadores)
-# print("data_checadores",data_checadores)
+
 # Crear un nuevo archivo de Excel
 wb = openpyxl.Workbook()
 ws = wb.active
@@ -97,9 +89,7 @@ ws['B1'] = "Nombre"
 ws['C1'] = "Dispositivo"
 # Escribir encabezados de fechas dinámicamente
 fechas = sorted(set(fecha for dias_no_checados, _, _ in dias_no_checados_por_empleado.values() for fecha in dias_no_checados))
-# fechas = sorted(set(fecha for dias_no_checados, _, _ in dias_no_checados_por_empleado.values() for fecha in dias_no_checados))
-# fechas = sorted(set(fecha for dias_no_checados, _, _ in dias_no_checados_por_empleado.values() for fecha in dias_no_checados))
-# fechas = sorted(set(fecha for dias_no_checados in dias_no_checados_por_empleado.values() for fecha in dias_no_checados))
+
 for idx, fecha in enumerate(fechas, start=1):
     ws.cell(row=1, column=3+idx).value = f"{fecha}"
 
@@ -138,14 +128,10 @@ for pin, (dias_no_checados, nombres, dispositivos) in dias_no_checados_por_emple
                 ws.cell(row=row, column=3+idx).value = "A"
         row += 1
 
-
-# Eliminar la primera columna de fechas
-# ws.delete_cols(4)
-# Eliminar la última columna
 ws.delete_cols(ws.max_column)
 
 # Guardar el archivo de Excel
-nombre_base = "Resultadodecdsv_"
+nombre_base = "resultadoFaltas"
 extension = "xlsx"
 
 # nombre_archivo = f"{os.path.splitext(archivo_checadores)[0]}.xlsx"

@@ -128,11 +128,42 @@ for pin, (dias_no_checados, nombres, dispositivos) in dias_no_checados_por_emple
                 ws.cell(row=row, column=3+idx).value = "A"
         row += 1
 
-ws.delete_cols(ws.max_column)
+# ws.delete_cols(ws.max_column)
 
 # Guardar el archivo de Excel
 nombre_base = "resultadoFaltas"
 extension = "xlsx"
+
+def comparar_archivos(archivo_seleccionado, archivo_todos):
+    # Cargar datos del archivo seleccionado por el usuario
+    with open(archivo_seleccionado, 'r', newline='', encoding='utf-8') as file:
+        csv_reader = csv.DictReader(file)
+        data_seleccionados = list(csv_reader)
+
+    # Cargar datos del archivo todos.csv
+    with open(archivo_todos, 'r', newline='', encoding='utf-8') as file:
+        csv_reader = csv.DictReader(file)
+        data_todos = list(csv_reader)
+
+    # Encontrar empleados faltantes en el archivo seleccionado
+    pins_seleccionados = set(empleado["PIN"] for empleado in data_seleccionados)
+    empleados_faltantes = [empleado for empleado in data_todos if empleado["PIN"] not in pins_seleccionados]
+
+    return empleados_faltantes
+
+# Llamada a la función para comparar archivos
+empleados_faltantes = comparar_archivos(archivo_checadores, 'todos.csv')
+
+# Si hay empleados faltantes, agregarlos a una nueva hoja en el archivo Excel
+if empleados_faltantes:
+    ws_faltantes = wb.create_sheet(title="Empleados no existentes")
+
+    # Escribir encabezados en la nueva hoja
+    ws_faltantes.append(["PIN", "Nombre de empleado","Dispositivo"])
+
+    # Escribir datos de empleados faltantes en la nueva hoja
+    for empleado in empleados_faltantes:
+        ws_faltantes.append([empleado["PIN"], empleado["Nombre de empleado"], empleado["Dispositivo"]])
 
 # nombre_archivo = f"{os.path.splitext(archivo_checadores)[0]}.xlsx"
 # wb.save(nombre_archivo)

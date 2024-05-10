@@ -1,9 +1,10 @@
 import csv
 import os
-from tkinter import Tk, filedialog,messagebox
+from tkinter import Tk, filedialog, messagebox
 from datetime import datetime, timedelta
 import openpyxl
 from collections import defaultdict
+
 def determinar_formato(checada_str):
     if '/' in checada_str:
         if len(checada_str) == 16:
@@ -17,6 +18,7 @@ def determinar_formato(checada_str):
             return "%d-%m-%Y %H:%M:%S"
     else:
         raise ValueError("Formato de fecha y hora no reconocido")
+
 def obtener_nombre_archivo(nombre_base, extension):
     contador = 1
     while True:
@@ -24,6 +26,7 @@ def obtener_nombre_archivo(nombre_base, extension):
         if not os.path.exists(nombre_archivo):
             return nombre_archivo
         contador += 1
+
 def buscar_no_checadores(archivo_checadores):
     with open(archivo_checadores, 'r', newline='', encoding='utf-8') as file:
         csv_reader = csv.DictReader(file)
@@ -39,43 +42,40 @@ def buscar_no_checadores(archivo_checadores):
         # Convertir la cadena de fecha y hora en un objeto datetime
         formato = determinar_formato(checada_str)
         checada_dt = datetime.strptime(checada_str, formato)
-        # Almacenar la fecha de la checada en el diccionario
         checadas_por_pin[pin].append((checada_dt, nombre, dispositivo))
-    # Obtener la fecha mínima global y máxima global de todas las checadas
-    todas_las_fechas = [checada.date() for checadas in checadas_por_pin.values() for checada, _, _ in checadas]
-    primer_dia_global = min(todas_las_fechas)
-    ultimo_dia_global = max(todas_las_fechas)
 
     # Crear un diccionario para almacenar los días en que no se checó por PIN
     dias_no_checados_por_pin = defaultdict(list)
-    # for pin, checadas in checadas_por_pin.items():
-    #     # Obtener el conjunto único de fechas (días) en que se checó para este PIN
-    #     dias_checados = set(checada.date() for checada, _, _ in checadas)
-    #     # Construir días no checados por empleado
-    #     for fecha in range((ultimo_dia_global - primer_dia_global).days + 1):
-    #         fecha_actual = primer_dia_global + timedelta(days=fecha)
-    #         if fecha_actual not in dias_checados:
-    #             dias_no_checados_por_pin[pin] = (dias_no_checados, [nombre for _, nombre, _ in checadas], [dispositivo for _, _, dispositivo in checadas])
-    #             # dias_no_checados_por_pin[pin].append(fecha_actual)
-
     for pin, checadas in checadas_por_pin.items():
-        # Obtener el conjunto único de fechas (días) en que se checó para este PIN
+        # Obtener el conjunto único de fechas (días) en que se checó
         dias_checados = set(checada.date() for checada, _, _ in checadas)
-        # Construir días no checados por empleado
-        for fecha in range((ultimo_dia_global - primer_dia_global).days + 1):
-            fecha_actual = primer_dia_global + timedelta(days=fecha)
-            if fecha_actual not in dias_checados:
-                # Verificar si el PIN ya tiene una entrada en el diccionario
-                if pin in dias_no_checados_por_pin:
-                    # Si ya tiene una entrada, agregar la fecha no checada, nombre y dispositivo a las listas existentes
-                    dias_no_checados_por_pin[pin][0].append(fecha_actual)
-                    dias_no_checados_por_pin[pin][1].append(nombre)
-                    dias_no_checados_por_pin[pin][2].append(dispositivo)
-                else:
-                    # Si no tiene una entrada, crear una nueva lista para el PIN
-                    dias_no_checados_por_pin[pin] = ([fecha_actual], [nombre], [dispositivo])
+        if not dias_checados:
+            continue  # Saltar si no hay registros para este PIN
+        # Obtener la fecha mínima y máxima de las checadas
+        primer_dia = min(checada.date() for checada, _, _ in checadas)
+        ultimo_dia = max(checada.date() for checada, _, _ in checadas)
+        primer_dia -= timedelta(days=1)
+        ultimo_dia += timedelta(days=1)
+        # Ajustar la fecha mínima y máxima para incluir el día siguiente al mínimo
+        todos_los_dias = [primer_dia + timedelta(days=d) for d in range((ultimo_dia - primer_dia).days + 1)]
+
+        # Generar todos los días entre la fecha mínima y máxima
+        # todos_los_dias = [primer_dia + timedelta(days=d) for d in range((ultimo_dia - primer_dia).days)]
+        # Determinar los días en que no se checó, excluyendo los domingos
+        dias_no_checados = [dia for dia in todos_los_dias if dia not in dias_checados and dia.weekday() != 6]
+        # Almacenar los días no checados en el diccionario
+        dias_no_checados_por_pin[pin] = (dias_no_checados, [nombre for _, nombre, _ in checadas], [dispositivo for _, _, dispositivo in checadas])
 
     return dias_no_checados_por_pin, data_checadores
+
+def leer_csv(nombre_archivo):
+    diccionario = {}
+    with open(nombre_archivo, 'r', encoding='utf-8') as archivo:
+        lector = csv.DictReader(archivo)
+        for fila in lector:
+            pin = fila['PIN']
+            diccionario[pin] = fila
+    return diccionario
 
 # Crear ventana de Tkinter para seleccionar el archivo
 root = Tk()
@@ -97,10 +97,6 @@ ws['B1'] = "Nombre"
 ws['C1'] = "Dispositivo"
 # Escribir encabezados de fechas dinámicamente
 fechas = sorted(set(fecha for dias_no_checados, _, _ in dias_no_checados_por_empleado.values() for fecha in dias_no_checados))
-# fechas = sorted(set(fecha for dias_no_checados, _, _ in dias_no_checados_por_empleado.values() for fecha in dias_no_checados))
-# fechas = sorted(set(fecha for dias_no_checados, _, _ in dias_no_checados_por_empleado.values() for fecha in dias_no_checados))
-# fechas = sorted(set(fecha for dias_no_checados in dias_no_checados_por_empleado.values() for fecha in dias_no_checados))
-
 for idx, fecha in enumerate(fechas, start=1):
     ws.cell(row=1, column=3+idx).value = f"{fecha}"
 
@@ -108,8 +104,6 @@ for idx, fecha in enumerate(fechas, start=1):
 row = 2
 for pin, (dias_no_checados, nombres, dispositivos) in dias_no_checados_por_empleado.items():
     if dias_no_checados:  # Verificar si hay días no checados
-        # print(f"PIN: {pin}, Dias no checados: {dias_no_checados}, Nombres: {nombres}, Dispositivos: {dispositivos}")
-
         # Escribir el PIN, nombre del empleado y dispositivo
         ws.cell(row=row, column=1).value = int(pin)  # Convertir PIN a entero
         ws.cell(row=row, column=2).value = nombres[0]  # Suponiendo que el nombre siempre estará en la primera posición
@@ -123,21 +117,43 @@ for pin, (dias_no_checados, nombres, dispositivos) in dias_no_checados_por_emple
                 ws.cell(row=row, column=3+idx).value = "A"
         row += 1
 
+# Leer el archivo 'todos.csv'
+archivo_csv = "todos.csv"
+diccionario_resultante = leer_csv(archivo_csv)
+
+# Obtener el PIN de los registros ya presentes en el archivo CSV
+pines_presentes = set(diccionario_resultante.keys())
+
+# Agregar los registros que no están presentes en el archivo CSV al final del archivo Excel
+for pin, (dias_no_checados, nombres, dispositivos) in dias_no_checados_por_empleado.items():
+    if pin not in pines_presentes:
+        # Agregar datos al archivo CSV
+        diccionario_resultante[pin] = {'PIN': pin, 'Nombre de empleado': nombres[0], 'Dispositivo': dispositivos[0]}
+        for fecha in dias_no_checados:
+            diccionario_resultante[pin][fecha.strftime("%d/%m/%Y")] = "A"
+
+# Actualizar el archivo CSV con los nuevos datos
+# Actualizar el archivo CSV con los nuevos datos
+with open(archivo_csv, 'w', newline='', encoding='utf-8') as csvfile:
+    fieldnames = ['Tenant', 'Dispositivo', 'Num de empleado', 'PIN', 'Nombre de empleado', 'Departamento', 'Tipo Nómina', 'Checada', 'Verificacion', 'Entregado a RRHH', 'Mensaje de entrega', 'Estatus de entrega', 'Tipo de empleado', 'Tipo Checada', 'Temperatura'] + fechas
+    writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+    writer.writeheader()
+    for row in diccionario_resultante.values():
+        # Crear un nuevo diccionario con las claves específicas para los encabezados existentes
+        new_row = {key: row.get(key, '') for key in fieldnames}
+        writer.writerow(new_row)
 
 # Eliminar la primera columna de fechas
-# ws.delete_cols(4)
+ws.delete_cols(4)
 # Eliminar la última columna
 ws.delete_cols(ws.max_column)
 
 # Guardar el archivo de Excel
 nombre_base = "Resultadodecdsv_"
 extension = "xlsx"
-
-# nombre_archivo = f"{os.path.splitext(archivo_checadores)[0]}.xlsx"
-# wb.save(nombre_archivo)
 nombre_archivo = obtener_nombre_archivo(nombre_base, extension)
 wb.save(nombre_archivo)
 
-# # Indicar al usuario que se ha creado el archivo
+# Indicar al usuario que se ha creado el archivo
 print(f"Se ha creado el archivo '{nombre_archivo}' con éxito.")
 messagebox.showinfo("Archivo creado", f"Se ha creado el archivo '{nombre_archivo}' con éxito.")

@@ -86,7 +86,7 @@ archivo_checadores = filedialog.askopenfilename(title="Seleccione el archivo CSV
 
 # Buscar días en que no se checó por empleado
 dias_no_checados_por_empleado, data_checadores = buscar_no_checadores(archivo_checadores)
-
+# print("data_checadores",data_checadores)
 # Crear un nuevo archivo de Excel
 wb = openpyxl.Workbook()
 ws = wb.active
@@ -100,9 +100,24 @@ fechas = sorted(set(fecha for dias_no_checados, _, _ in dias_no_checados_por_emp
 # fechas = sorted(set(fecha for dias_no_checados, _, _ in dias_no_checados_por_empleado.values() for fecha in dias_no_checados))
 # fechas = sorted(set(fecha for dias_no_checados, _, _ in dias_no_checados_por_empleado.values() for fecha in dias_no_checados))
 # fechas = sorted(set(fecha for dias_no_checados in dias_no_checados_por_empleado.values() for fecha in dias_no_checados))
-
 for idx, fecha in enumerate(fechas, start=1):
     ws.cell(row=1, column=3+idx).value = f"{fecha}"
+
+def buscar_nombre_por_pin(pin):
+    nombre_empleado = None
+    for empleado in data_checadores:
+        if empleado['PIN'] == pin:
+            nombre_empleado = empleado['Nombre de empleado']
+            break  # Si encuentras el empleado, puedes salir del bucle
+    return nombre_empleado
+
+def buscar_dispositivo_por_pin(pin):
+    nombre_empleado = None
+    for empleado in data_checadores:
+        if empleado['PIN'] == pin:
+            nombre_empleado = empleado['Dispositivo']
+            break  # Si encuentras el empleado, puedes salir del bucle
+    return nombre_empleado
 
 # Escribir datos en el archivo de Excel
 row = 2
@@ -112,8 +127,8 @@ for pin, (dias_no_checados, nombres, dispositivos) in dias_no_checados_por_emple
 
         # Escribir el PIN, nombre del empleado y dispositivo
         ws.cell(row=row, column=1).value = int(pin)  # Convertir PIN a entero
-        ws.cell(row=row, column=2).value = nombres[0]  # Suponiendo que el nombre siempre estará en la primera posición
-        ws.cell(row=row, column=3).value = dispositivos[0]  # Suponiendo que el dispositivo siempre estará en la primera posición
+        ws.cell(row=row, column=2).value = buscar_nombre_por_pin(pin)  # Suponiendo que el nombre siempre estará en la primera posición
+        ws.cell(row=row, column=3).value = buscar_dispositivo_por_pin(pin)  # Suponiendo que el dispositivo siempre estará en la primera posición
 
         # Escribir las fechas en las columnas correspondientes
         for idx, fecha in enumerate(fechas, start=1):

@@ -16,6 +16,7 @@ def determinar_formato(checada_str):
         elif len(checada_str) == 19:
             return "%d-%m-%Y %H:%M:%S"
     else:
+        print("Formato de fecha y hora no reconocido")
         raise ValueError("Formato de fecha y hora no reconocido")
     
 def obtener_nombre_archivo(nombre_base, extension):
@@ -48,6 +49,8 @@ def buscar_no_checadores(archivo_checadores):
     primer_dia_global = min(todas_las_fechas)
     ultimo_dia_global = max(todas_las_fechas)
 
+    # Crear una lista con todas las fechas dentro del rango de fechas
+    todas_las_fechas_posibles = [primer_dia_global + timedelta(days=i) for i in range((ultimo_dia_global - primer_dia_global).days + 1)]
     # Crear un diccionario para almacenar los días en que no se checó por PIN
     dias_no_checados_por_pin = defaultdict(list)
 
@@ -55,17 +58,15 @@ def buscar_no_checadores(archivo_checadores):
         # Obtener el conjunto único de fechas (días) en que se checó para este PIN
         dias_checados = set(checada.date() for checada, _, _ in checadas)
         # Construir días no checados por empleado
-        
-        for fecha in range((ultimo_dia_global - primer_dia_global).days + 1):
-            fecha_actual = primer_dia_global + timedelta(days=fecha)
-            if fecha_actual not in dias_checados:
+        for fecha in todas_las_fechas_posibles:
+            if fecha not in dias_checados:
                 # Verificar si el PIN ya tiene una entrada en el diccionario
                 if pin in dias_no_checados_por_pin:
                     # Si ya tiene una entrada, agregar la fecha no checada, nombre y dispositivo a las listas existentes
-                    dias_no_checados_por_pin[pin][0].append(fecha_actual)
+                    dias_no_checados_por_pin[pin][0].append(fecha)
                 else:
                     # Si no tiene una entrada, crear una nueva lista para el PIN
-                    dias_no_checados_por_pin[pin] = ([fecha_actual], [nombre], [dispositivo])
+                    dias_no_checados_por_pin[pin] = ([fecha], [nombre], [dispositivo])
 
     return dias_no_checados_por_pin, data_checadores
 
@@ -73,8 +74,15 @@ def buscar_no_checadores(archivo_checadores):
 root = Tk()
 root.withdraw()  # Ocultar la ventana principal
 
+# Ventana emergente para explicar el rango de fechas esperado
+messagebox.showinfo("Rango de fechas",
+                    "Por favor, asegúrese de seleccionar un archivo CSV que contenga registros de checadas de hasta una semana atrás hasta la fecha actual.")
+
 # Solicitar al usuario que seleccione el archivo CSV
 archivo_checadores = filedialog.askopenfilename(title="Seleccione el archivo CSV", filetypes=[("Archivos CSV", "*.csv")])
+
+# Solicitar al usuario que seleccione el archivo CSV
+# archivo_checadores = filedialog.askopenfilename(title="Seleccione el archivo CSV", filetypes=[("Archivos CSV", "*.csv")])
 
 # Buscar días en que no se checó por empleado
 dias_no_checados_por_empleado, data_checadores = buscar_no_checadores(archivo_checadores)

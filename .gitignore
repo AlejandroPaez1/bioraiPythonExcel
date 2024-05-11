@@ -1,3 +1,7 @@
 *.csv
 *.xls
 *.xlsx
+*.spec
+
+build
+dist

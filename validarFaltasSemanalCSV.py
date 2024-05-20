@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 import openpyxl
 from collections import defaultdict
 import re
+import historico
 
 def determinar_formato(checada_str):
     if '/' in checada_str:
@@ -100,7 +101,7 @@ def comparar_archivos(archivo_seleccionado, archivo_todos):
 
     return empleados_faltantes
 
-def guardar_empleados_faltantes(wb, data_checadores, archivo_checadores):
+def guardar_empleados_faltantes(wb, archivo_checadores):
     empleados_faltantes = comparar_archivos(archivo_checadores, 'todos.csv')
 
     if empleados_faltantes:
@@ -124,7 +125,9 @@ def main():
 
     try:
         dias_no_checados_por_empleado, data_checadores = buscar_no_checadores(archivo_checadores)
-        
+        # historico.inicializacion(dias_no_checados_por_empleado,data_checadores)
+        # faltante = historico.generar_historico(dias_no_checados_por_empleado, data_checadores)
+        # print(dias_no_checados_por_empleado)
         wb = openpyxl.Workbook()
         ws = wb.active
         ws.title ="Checks"
@@ -157,8 +160,8 @@ def main():
         extension = "xlsx"
         nombre_archivo = obtener_nombre_archivo(nombre_base, extension)
         # Llamar a la función para guardar empleados faltantes
-        wb = guardar_empleados_faltantes(wb, data_checadores, archivo_checadores)
-
+        wb = historico.generar_historico(wb,dias_no_checados_por_empleado, data_checadores)
+        wb = guardar_empleados_faltantes(wb, archivo_checadores)
         wb.save(nombre_archivo)
 
         messagebox.showinfo("Archivo creado", f"Se ha creado el archivo '{nombre_archivo}' con éxito.")

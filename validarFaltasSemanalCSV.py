@@ -70,7 +70,7 @@ def obtener_numeros_checada_por_pin_y_fecha(pin, fecha, data_checadores):
     for empleado in data_checadores:
         if empleado['PIN'] == pin and empleado['Checada'].startswith(fecha_str):
             numeros_checada.extend(extraer_numeros_checada(empleado['Checada']))
-    return numeros_checada
+    return list(reversed(numeros_checada))  # Invertir el orden de la lista antes de devolverla
 
 def buscar_nombre_por_pin(pin, data_checadores):
     for empleado in data_checadores:
@@ -83,7 +83,37 @@ def buscar_dispositivo_por_pin(pin, data_checadores):
         if empleado['PIN'] == pin:
             return empleado['Dispositivo']
     return None
+def comparar_archivos(archivo_seleccionado, archivo_todos):
+    # Cargar datos del archivo seleccionado por el usuario
+    with open(archivo_seleccionado, 'r', newline='', encoding='utf-8') as file:
+        csv_reader = csv.DictReader(file)
+        data_seleccionados = list(csv_reader)
 
+    # Cargar datos del archivo todos.csv
+    with open(archivo_todos, 'r', newline='', encoding='utf-8') as file:
+        csv_reader = csv.DictReader(file)
+        data_todos = list(csv_reader)
+
+    # Encontrar empleados faltantes en el archivo seleccionado
+    pins_seleccionados = set(empleado["PIN"] for empleado in data_seleccionados)
+    empleados_faltantes = [empleado for empleado in data_todos if empleado["PIN"] not in pins_seleccionados]
+
+    return empleados_faltantes
+
+def guardar_empleados_faltantes(wb, data_checadores, archivo_checadores):
+    empleados_faltantes = comparar_archivos(archivo_checadores, 'todos.csv')
+
+    if empleados_faltantes:
+        ws_faltantes = wb.create_sheet(title="EmpleadosNoExist")
+
+        # Escribir encabezados en la nueva hoja
+        ws_faltantes.append(["PIN", "Nombre","Posición"])
+
+        # Escribir datos de empleados faltantes en la nueva hoja
+        for empleado in empleados_faltantes:
+            ws_faltantes.append([empleado["PIN"], empleado["Nombre"],empleado["Posición"]])
+
+        return wb
 def main():
     root = Tk()
     root.withdraw()
@@ -97,7 +127,7 @@ def main():
         
         wb = openpyxl.Workbook()
         ws = wb.active
-
+        ws.title ="Checks"
         ws['A1'] = "PIN"
         ws['B1'] = "Nombre"
         ws['C1'] = "Dispositivo"
@@ -126,6 +156,9 @@ def main():
         nombre_base = "resultadoFaltas"
         extension = "xlsx"
         nombre_archivo = obtener_nombre_archivo(nombre_base, extension)
+        # Llamar a la función para guardar empleados faltantes
+        wb = guardar_empleados_faltantes(wb, data_checadores, archivo_checadores)
+
         wb.save(nombre_archivo)
 
         messagebox.showinfo("Archivo creado", f"Se ha creado el archivo '{nombre_archivo}' con éxito.")
